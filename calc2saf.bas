@@ -258,7 +258,7 @@ Sub Main
 		i = i + 1
 		oCell = oSheet.getCellByPosition(0, i)
 	loop
-	Msgbox "Log fájl helye: " & Basefolder + ps + "convert.log"
+	Msgbox "Log file has been created: " & Basefolder + ps + "convert.log"
 End Sub
 
 Function createMetadataFile(id, schema, content)
