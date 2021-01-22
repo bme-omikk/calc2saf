@@ -283,26 +283,58 @@ Function createMetadataFile(id, schema, content)
 		exit function
 	End If
 
-	sHeader = "<?xml version=""1.0"" encoding=""UTF-8""?>" & Chr(10) &_
-		      "<dublin_core schema=""" & schema & """>"
+	sHeader = "<?xml version=""1.0"" encoding=""UTF-8""?>" & eol &_
+		      "<dublin_core schema=""" & schema & """>" & eol
 	sEnd = "</dublin_core>"
 
 	If Not ((LBound(content) = 0) And (UBound(content) = -1)) Then
-		Open sFilename For Append As #iFile
-	
-		Print #iFile, sHeader
+		sStr = sHeader
 			   
 	   	For i = 0 To UBound(content)
-			Print #iFile, content(i)
+	   		sStr = sStr & tab & content(i) & eol
 		Next
 		
-		Print #iFile, sEnd
+		sStr = sStr & sEnd
 		
-		Close iFile
+		writeEncodedText(sFilename, sStr, "UTF-8")
 	End If
-	
 	createMetadataFile = "Metadata file " & sFilename & " for " & id & " has been written."
 End Function
+
+'**
+'* This function can write text with encodings into a file.
+'* The simple file write does not create UTF-8 encoding under Windows
+'* instead it encodes them with ISO-8859:(
+'* Based on https://forum.openoffice.org/en/forum/viewtopic.php?f=20&t=87895#p412845
+Sub writeEncodedText(myPath As String, myText As String, myEncoding As String)
+	Dim myTextFile As Object, mySf As Object, myFileStream As Object
+
+	On Error Goto fileKO
+
+	mySf = createUnoService("com.sun.star.ucb.SimpleFileAccess")
+	myTextFile = createUnoService("com.sun.star.io.TextOutputStream" )
+	myFileStream = mySf.openFileWrite(myPath)
+	myTextFile.OutputStream = myFileStream
+	myTextFile.Encoding = myEncoding
+
+	myTextFile.writeString(myText)
+
+	myFileStream.closeOutput : myTextFile.closeOutput
+
+	On Error Goto 0
+	Exit Sub
+
+	fileKO:
+	Resume fileKO2
+
+	fileKO2:
+	On Error Resume Next
+	msgBox("File write error !", 16)
+	myFileStream.closeOutput : myTextFile.closeOutput
+
+	On Error Goto 0
+End Sub
+
 
 Function createDublinCoreString(id, oSheet, row) As String
 	Dim res As String
@@ -368,26 +400,19 @@ End Function
 Function createContentsFile(id, str) As String
 	Dim iFile As Integer
 	Dim sStr As String	
-
-	iFile = FreeFile
 	
-	Open baseFolder + id + "/contents" For Append As iFile
-	Print #iFile, str
-	Close iFile
+	writeEncodedText(baseFolder + id + "/contents", str, "UTF-8")
 	
 	createContentsFile = "Contents file for " + id + " has been written."
 End Function
 
 Function createCollectionsFile(id) As String
 	Dim iFile As Integer
-	Dim sStr As String	
-
-	iFile = FreeFile
+	Dim sStr As String
 	
-	Open baseFolder + id + "/collections" For Output As iFile
 	sStr = collectionHandle
-	Print #iFile, sStr
-	Close iFile
+	
+	writeEncodedText(baseFolder + id + "/collections", sStr, "UTF-8")
 	
 	createCollectionsFile = "Collections file for " + id + " has been written."
 End Function
