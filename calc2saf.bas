@@ -14,6 +14,7 @@ Dim descriptionColumn As Integer
 Dim primaryColumn As Integer
 Dim filenameColumn As String
 Dim assetNrColumn As Integer
+Dim withoutFileCopy As String
 Dim skipCols() As Integer
 Dim collectionHandle As String
 
@@ -167,6 +168,7 @@ Sub Main
 	filenameColumn   = CInt(getColumnNrByChar(ThisComponent.Sheets.getByName("Config").getCellRangeByName("B14").String))
 	assetNrColumn    = CInt(getColumnNrByChar(ThisComponent.Sheets.getByName("Config").getCellRangeByName("B15").String))
 	collectionHandle = ThisComponent.Sheets.getByName("Config").getCellRangeByName("B16").String
+	withoutFileCopy  = ThisComponent.Sheets.getByName("Config").getCellRangeByName("B18").String
 	'**
 
 	l("Converting sheet data to DSpace import package")
@@ -425,6 +427,21 @@ Function createFolder(f) As String
 	End If	
 End Function
 
+Sub createEmptyFile(fName)
+    Dim iNumber As Integer
+    
+    iNumber = Freefile
+    Open fName For Output As #iNumber    
+    Print #iNumber, "NEED-OVERWRITE"
+    Close #iNumber
+    
+    iNumber = Freefile
+    Open baseFolder & "files-to-copy.lst" For Append As #iNumber    
+    Print #iNumber, fName
+    Close #iNumber
+    iNumber = Freefile
+End Sub
+
 Function copyFile(id, row, oSheet) As String
 	Dim file As String
 	Dim val As String
@@ -438,6 +455,12 @@ Function copyFile(id, row, oSheet) As String
 
 	If oSheet.getCellByPosition(assetNrColumn, row).String<>"" Then
 		copyFile = oSheet.getCellByPosition(filenameColumn, row).String
+		Exit Function
+	End If
+	
+	If withoutFileCopy = "true" Then
+		copyFile = oSheet.getCellByPosition(filenameColumn, row).String
+		createEmptyFile baseFolder + id + ps + oSheet.getCellByPosition(filenameColumn, row).String
 		Exit Function
 	End If
 	
@@ -461,5 +484,5 @@ Function copyFile(id, row, oSheet) As String
 	Loop
 	Exit Function
 Err:
-	Msgbox "Error during copy file: " & baseFolder+ id + ps + val
+	Msgbox "Error during copy file: " & baseFolder+ id + ps + val & " " & Error
 End Function
