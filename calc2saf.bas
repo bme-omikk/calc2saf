@@ -177,22 +177,22 @@ Sub Main
 	i = firstDataRow
 	
 	oSheets = ThisComponent.sheets
-	oSheet = oSheets(sheetName)
+	oSheet = oSheets.getByName(sheetName)
 	
 	oCell = oSheet.getCellByPosition(0, i)
 	
 	do while oCell.String <> ""
 		s = oCell.String
 		' if the id column contains file names then we use only the file name part
-		pos = InStr(s, ".")
-		If pos > 0 Then
-			s = Mid(s, 1, InStr(s, ".")-1)
-		End If
 
 		l(createFolder(baseFolder + s))
 		
 		copiedFiles = copyFile(s, i, oSheet)
-		l("Copied files: " & copiedFiles)
+		If InStr(copiedFiles, "Error") Then
+			l(copiedFiles, "ERROR")
+		Else
+			l("Copied files: " & copiedFiles)
+		End If
 		
 		files = Split(copiedFiles)
 				
@@ -340,18 +340,21 @@ End Sub
 
 Function createDublinCoreString(id, oSheet, row) As String
 	Dim res As String
-	Dim c, dc_i, dcterms_i, local_i, i As Integer
+	Dim fullstr As String
+	Dim c, dc_i, dcterms_i, local_i, dspace_i, i As Integer
 	Dim cellStr As String
 	Dim oCell, oDcCell As Variant
 	Dim dcParts As Variant
 	Dim dc_lines() As String
 	Dim dcterms_lines() As String
 	Dim local_lines() As String
+	Dim dspace_lines() As String
 	
 	c = 0
 	dc_i = 0
 	dcterms_i = 0
 	local_i = 0
+	dspace_i = 0
 	
 	do while c <= lastDataColumn
 		res = ""
@@ -368,7 +371,10 @@ Function createDublinCoreString(id, oSheet, row) As String
 					Else
 						res = res & " qualifier="""">"
 					End If
-					res = res & Replace(cellStr, "&", "&amp;") & "</dcvalue>"
+					fullstr = Replace(cellStr, "&", "&amp;")
+					fullstr = Replace(fullstr, "<", "&lt;")
+					fullstr = Replace(fullstr, ">", "&gt;")
+					res = res & fullstr & "</dcvalue>"
 				End If
 				If dcParts(0) = "dc" Then
 					ReDim Preserve dc_lines(dc_i)
@@ -382,6 +388,10 @@ Function createDublinCoreString(id, oSheet, row) As String
 					ReDim Preserve local_lines(local_i)
 					local_lines(local_i) = res
 					local_i = local_i + 1
+				ElseIf dcParts(0) = "dspace" Then
+					ReDim Preserve dspace_lines(dspace_i)
+					dspace_lines(dspace_i) = res
+					dspace_i = dspace_i + 1
 				End If
 			End If
 		End If
@@ -391,6 +401,7 @@ Function createDublinCoreString(id, oSheet, row) As String
 	createMetadataFile(id, "dc", dc_lines)
 	createMetadataFile(id, "dcterms", dcterms_lines)
 	createMetadataFile(id, "local", local_lines)
+	createMetadataFile(id, "dspace", dspace_lines)
 
 	createDublinCoreString = res
 End Function
@@ -484,5 +495,7 @@ Function copyFile(id, row, oSheet) As String
 	Loop
 	Exit Function
 Err:
-	Msgbox "Error during copy file: " & baseFolder+ id + ps + val & " " & Error
+	'Msgbox "Error during copy file: " & baseFolder+ id + ps + val & " " & Error
+	copyFile = copyFile + "Error during copy file: " + baseFolder+ id + ps + val
+	Exit Function
 End Function
