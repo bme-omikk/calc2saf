@@ -499,3 +499,4 @@ Err:
 	copyFile = copyFile + "Error during copy file: " + baseFolder+ id + ps + val
 	Exit Function
 End Function
+
