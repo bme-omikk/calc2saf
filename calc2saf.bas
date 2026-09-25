@@ -35,19 +35,19 @@ End Function
 
 '**
 '* https://wiki.openoffice.org/wiki/Documentation/BASIC_Guide/Strings_(Runtime_Library)
-'* 
+'*
 Function Replace(Source As String, Search As String, NewPart As String)
   Dim Result As String
   Dim StartPos As Long
   Dim CurrentPos As Long
- 
+
   Result = ""
   StartPos = 1
   CurrentPos = 1
- 
+
   If Search = "" Then
     Result = Source
-  Else 
+  Else
     Do While CurrentPos <> 0
       CurrentPos = InStr(StartPos, Source, Search)
       If CurrentPos <> 0 Then
@@ -58,9 +58,9 @@ Function Replace(Source As String, Search As String, NewPart As String)
       Else
         Result = Result + Mid(Source, StartPos, Len(Source))
       End If                ' Position <> 0
-    Loop 
-  End If 
- 
+    Loop
+  End If
+
   Replace = Result
 End Function
 
@@ -75,7 +75,7 @@ Function l(msg, Optional level)
 	Else
 		lvl = level
 	End If
-	
+
 	Open baseFolder + "convert.log" For Append As iFile
 	Print #iFile, Now & Chr(9) & lvl & Chr(9) & msg
 	Close iFile
@@ -291,14 +291,14 @@ Function createMetadataFile(id, schema, content)
 
 	If Not ((LBound(content) = 0) And (UBound(content) = -1)) Then
 		sStr = sHeader
-			   
+			
 	   	For i = 0 To UBound(content)
 	   		sStr = sStr & tab & content(i) & eol
 		Next
 		
 		sStr = sStr & sEnd
 		
-		writeEncodedText(sFilename, sStr, "UTF-8")
+		writeEncodedText(sFilename, sStr, "UTF-8", False)
 	End If
 	createMetadataFile = "Metadata file " & sFilename & " for " & id & " has been written."
 End Function
@@ -308,16 +308,21 @@ End Function
 '* The simple file write does not create UTF-8 encoding under Windows
 '* instead it encodes them with ISO-8859:(
 '* Based on https://forum.openoffice.org/en/forum/viewtopic.php?f=20&t=87895#p412845
-Sub writeEncodedText(myPath As String, myText As String, myEncoding As String)
+Sub writeEncodedText(myPath As String, myText As String, myEncoding As String, append As Boolean)
 	Dim myTextFile As Object, mySf As Object, myFileStream As Object
 
 	On Error Goto fileKO
 
 	mySf = createUnoService("com.sun.star.ucb.SimpleFileAccess")
-	myTextFile = createUnoService("com.sun.star.io.TextOutputStream" )
+	myTextFile = createUnoService("com.sun.star.io.TextOutputStream")
 	myFileStream = mySf.openFileWrite(myPath)
 	myTextFile.OutputStream = myFileStream
 	myTextFile.Encoding = myEncoding
+
+	If append Then
+		myText = myText + Chr(13)
+		myFileStream.seek(myFileStream.getLength())
+	End If
 
 	myTextFile.writeString(myText)
 
@@ -414,7 +419,7 @@ Function createContentsFile(id, str) As String
 	Dim iFile As Integer
 	Dim sStr As String	
 	
-	writeEncodedText(baseFolder + id + "/contents", str, "UTF-8")
+	writeEncodedText(baseFolder + id + "/contents", str, "UTF-8", True)
 	
 	createContentsFile = "Contents file for " + id + " has been written."
 End Function
@@ -425,7 +430,7 @@ Function createCollectionsFile(id) As String
 	
 	sStr = collectionHandle
 	
-	writeEncodedText(baseFolder + id + "/collections", sStr, "UTF-8")
+	writeEncodedText(baseFolder + id + "/collections", sStr, "UTF-8", False)
 	
 	createCollectionsFile = "Collections file for " + id + " has been written."
 End Function
@@ -440,14 +445,14 @@ End Function
 
 Sub createEmptyFile(fName)
     Dim iNumber As Integer
-    
+
     iNumber = Freefile
-    Open fName For Output As #iNumber    
+    Open fName For Output As #iNumber
     Print #iNumber, "NEED-OVERWRITE"
     Close #iNumber
-    
+
     iNumber = Freefile
-    Open baseFolder & "files-to-copy.lst" For Append As #iNumber    
+    Open baseFolder & "files-to-copy.lst" For Append As #iNumber
     Print #iNumber, fName
     Close #iNumber
     iNumber = Freefile
@@ -495,8 +500,7 @@ Function copyFile(id, row, oSheet) As String
 	Loop
 	Exit Function
 Err:
-	'Msgbox "Error during copy file: " & baseFolder+ id + ps + val & " " & Error
+	Msgbox "Error during copy file: " & baseFolder+ id + ps + val & " " & Error
 	copyFile = copyFile + "Error during copy file: " + baseFolder+ id + ps + val
 	Exit Function
 End Function
-
